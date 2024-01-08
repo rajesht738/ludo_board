@@ -4,8 +4,8 @@
   /* border: 1px solid black; */
   height: calc((100vh / 15));
   max-height: calc((100vh / 15));
-  width: calc((100vh / 15));
-  max-width: calc((100vh / 15));
+  width: calc((100vh / 15)) !important;
+  max-width: calc((100vh / 20)) !important;
   padding: 0px;
   text-align: center;
   overflow: visible;
@@ -72,7 +72,7 @@
   display: flex;
   justify-content: space-around;
   align-items: center;
-  width: 100vh;
+  width: 80vh;
 }
 
 .control-3 {
@@ -125,8 +125,8 @@
   margin-right: auto;
   border-radius: 10px;
   background-color: aliceblue;
-  width: calc((100vw - 100vh)/12);
-  height: calc((100vw - 100vh)/12);
+  width: calc((100vw - 100vh)/10);
+  height: calc((100vw - 100vh)/10);
 }
 
 .point_container::before {

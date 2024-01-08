@@ -16,12 +16,15 @@ import React, { useEffect, useRef, useState } from "react";
 import $ from "jquery";
 
 import io from "socket.io-client";
+
+
 export default function Board({props}) {
   // const [music1, setMusic1] = useState(new Audio(m));
 
+
   const [socket, setSocket] = useState();
   const [Profile , setProfile] = useState();
-  const [diceCount , setDiceCount] = useState(1);
+
   const isMounted = useRef(true);
   const [players, setPlayers] = useState([1, 2]);
   const [steps, setSteps] = useState(1);
@@ -101,7 +104,7 @@ export default function Board({props}) {
   const [widthYellow2, setWidthYellow2] = useState({ width: "22px" });
   const [widthYellow3, setWidthYellow3] = useState({ width: "22px" });
   const [widthYellow4, setWidthYellow4] = useState({ width: "22px" });
-  // let socket = new WebSocket("ws://localhost:5001/server");
+ 
   
   const pieces = [
     "blue-1",
@@ -374,9 +377,13 @@ export default function Board({props}) {
     "y8",
     "y9",
   ];
+ 
   
+ 
+ 
+ 
 useEffect(() => {
-
+  let sockett = new WebSocket("ws://localhost:5001/server");
   // console.log('Hello')
    const sharedDataString = localStorage.getItem('sharedData');
   if(sharedDataString){
@@ -385,8 +392,8 @@ useEffect(() => {
     setPlayer2(sharedData.Accepted_by_name)
     setProfile(sharedData.Created_by_avatar)
     console.log('sharedData',sharedData);
-   
   }
+ 
   WebSocket.prototype.emit = function (event, data) {
     if (this.readyState === WebSocket.OPEN)
       this.send(JSON.stringify({ event, data }));
@@ -395,59 +402,92 @@ useEffect(() => {
     this._socketListeners = this._socketListeners || {};
     this._socketListeners[eventName] = callback;
   };
-  let socket = new WebSocket("ws://localhost:5001/server");
+  // setPlayer(player);
+  sockett.listen("DiceRolled", (data) => {
+    // debugger;
+    // setPlayer(player);
+    console.log('player Listen', data.p);
+    console.log('Current Player State', player);
+    // if(data.p===2){
+    //   setPlayer(player => player + 1);
+     
+    // }
+    // console.log(player);
+    if(data.p === player && ableToplay) {
+      // console.log('Outer Player',player);
+     window.navigator.vibrate(50);
+     // setAbleToPlay(false);
+      for (let i = 0; i <= 410; i++) {
+        setTimeout(function () {
+          const nb = generateRandomIntegerInRange(1, 6);
+          setSteps(nb);
+          if (i === 410) {
+            allowPlayer(data.p, nb);
+          }
+        }, 1);
+      }
+    }
+   else if(data.p === player + 1 && ableToplay) {
+      console.log('Outer Player',player);
+     window.navigator.vibrate(50);
+      // setAbleToPlay(false);
+      for (let i = 0; i <= 410; i++) {
+        setTimeout(function () {
+          const nb = generateRandomIntegerInRange(1, 6);
+          setSteps(nb);
+          if (i === 410) {
+            allowPlayer(data.p, nb);
+          }
+        }, 1);
+      }
+    }
+   
+
+    console.log('steps',steps);
+    // console.log('Outer Player',player);
+    // setPlayer(nextPlayer());
+  });
   function openFunc() {
-    socket.onopen = () => {
+    sockett.onopen = () => {
       console.log("websocket is connected 👍");
-      setSocket(socket);
-      socket.pingTimeout = setTimeout(() => {
-        socket.close();
-        setSocket(undefined);
-      }, 30000);
+      setSocket(sockett);
+      
+      // socket.pingTimeout = setTimeout(() => {
+      //   socket.close();
+      //   setSocket(undefined);
+      // }, 30000);
     };
   }
-
+  // setPlayer(player);
+ 
   function listenFunc() {
-    socket.onmessage = function (e) {
+    sockett.onmessage = function (e) {
+      
+      // setPlayer(player);
+      
       try {
         const { event, data } = JSON.parse(e.data);
-        socket._socketListeners[event](data);
-      } catch (error) {
-        console.log(error);
-      }
-    };
-
-   
-    socket.listen("DiceRolled", (data) => {
+        // console.log(event);
+        sockett._socketListeners[event](data);
       
-      console.log(data);
-     
-      setDiceCount(data);
-      // let owenedCreated = [],
-      //   remainingGame = [];
-      // data.forEach(function (ele) {
-      //   if (ele.Created_by)
-      //     if (
-      //       ele.Created_by._id == userID.current &&
-      //       (ele.Status == "new" || ele.Status == "requested")
-      //     ) {
-      //       owenedCreated.push(ele);
-      //     } else {
-      //       remainingGame.push(ele);
-      //     }
-      // });
-      // setCreated(owenedCreated);
-      // setallgame(remainingGame);
-    });
+        
+      } catch (error) {
+        console.log('Error-',error);
+      }
+      
+    };
+  
+   
+   
   }
   function closeFunc() {
-    socket.onclose = () => {
+    sockett.onclose = () => {
       console.log("socket disconnected wow 😡");
       if (isMounted.current) {
-        clearTimeout(socket.pingTimeout);
+        // clearTimeout(socket.pingTimeout);
         setSocket(undefined);
         // socket = new WebSocket('wss://sockets.jaipurludo.com/server');
-        socket = new WebSocket("ws://192.168.29.119:5001/server");
+        //  socket = new WebSocket("ws://localhost:5001/server");
         // socket = new WebSocket('wss://websocket-s7tn.onrender.com/server');
         openFunc();
         listenFunc();
@@ -455,15 +495,16 @@ useEffect(() => {
       }
     };
   }
+
   openFunc();
   listenFunc();
-  closeFunc();
-  // return () => {
-  //   isMounted.current = false;
-  //   // clearTimeout(socket.pingTimeout);
-  //   setSocket(undefined);
-  //   socket.close();
-  // };
+  // closeFunc();
+  return () => {
+    isMounted.current = false;
+    clearTimeout(sockett.pingTimeout);
+    setSocket(undefined);
+    sockett.close();
+  };
  
  }, []);
 
@@ -480,7 +521,7 @@ useEffect(() => {
           pos[3] === "b6"
         ) {
           new_winners.push(p);
-          setPlayer(nextPlayer());
+          setPlayer(nextPlayer(player));
         } else if (
           p === 2 &&
           pos[4] === pos[5] &&
@@ -489,7 +530,7 @@ useEffect(() => {
           pos[7] === "r6"
         ) {
           new_winners.push(p);
-          setPlayer(nextPlayer());
+          setPlayer(nextPlayer(player));
         } else if (
           p === 3 &&
           pos[8] === pos[9] &&
@@ -498,7 +539,7 @@ useEffect(() => {
           pos[11] === "g6"
         ) {
           new_winners.push(p);
-          setPlayer(nextPlayer());
+          setPlayer(nextPlayer(player));
         } else if (
           p === 4 &&
           pos[12] === pos[13] &&
@@ -507,7 +548,7 @@ useEffect(() => {
           pos[15] === "y6"
         ) {
           new_winners.push(p);
-          setPlayer(nextPlayer());
+          setPlayer(nextPlayer(player));
         }
       }
     }
@@ -1053,7 +1094,7 @@ useEffect(() => {
       setPositions(pos);
       updateWidth(pos);
       if (next) {
-        setPlayer(nextPlayer());
+        setPlayer(nextPlayer(player));
       }
       updateWinners(pos);
       if (able) {
@@ -1116,7 +1157,7 @@ useEffect(() => {
     return Math.floor(Math.random() * (max - min + 1)) + min;
   }
 
-  function nextPlayer() {
+  function nextPlayer(currentplr) {
     if (winners.length < players.length - 1) {
       const w = winners;
       var pl = [];
@@ -1125,23 +1166,27 @@ useEffect(() => {
           pl.push(p);
         }
       }
-      return getNext(pl);
+      // console.log('Next Player',getNext(pl));
+      return getNext(pl,currentplr);
     } else {
       return 0;
     }
   }
 
-  function getNext(p) {
-    if (p.indexOf(player) < p.length - 1) {
-      return p[p.indexOf(player) + 1];
+  function getNext(p, currentplr) {
+    console.log("getNext Player",currentplr);
+    if (p.indexOf(currentplr) < p.length - 1) {
+      return p[p.indexOf(currentplr) + 1];
     }
     return p[0];
   }
 
   function allowPlayer(p, nb) {
+    // console.log('p', p);
     var allow = false;
     var allowed = [];
     if (p === 1) {
+     
       const pos = ["b1", "b2", "b3", "b4", "b5", "b6"];
       if (nb === 6) {
         if (positions[0] === "0" || !pos.includes(positions[0])) {
@@ -1165,6 +1210,7 @@ useEffect(() => {
           allowed.push(pieces[3]);
         }
       } else {
+       
         if (
           (!pos.includes(positions[0]) ||
             nb + pos.indexOf(positions[0]) <= 5) &&
@@ -1203,6 +1249,7 @@ useEffect(() => {
         }
       }
     } else if (p === 2) {
+      
       const pos = ["r1", "r2", "r3", "r4", "r5", "r6"];
       if (nb === 6) {
         if (positions[4] === "0" || !pos.includes(positions[4])) {
@@ -1226,6 +1273,7 @@ useEffect(() => {
           allowed.push(pieces[7]);
         }
       } else {
+       
         if (
           (!pos.includes(positions[4]) ||
             nb + pos.indexOf(positions[4]) <= 5) &&
@@ -1263,158 +1311,172 @@ useEffect(() => {
           allowed.push(pieces[7]);
         }
       }
-    } else if (p === 3) {
-      const pos = ["g1", "g2", "g3", "g4", "g5", "g6"];
-      if (nb === 6) {
-        if (positions[8] === "0" || !pos.includes(positions[8])) {
-          setGreen1(true);
-          allow = true;
-          allowed.push(pieces[8]);
-        }
-        if (positions[9] === "0" || !pos.includes(positions[9])) {
-          setGreen2(true);
-          allow = true;
-          allowed.push(pieces[9]);
-        }
-        if (positions[10] === "0" || !pos.includes(positions[10])) {
-          setGreen3(true);
-          allow = true;
-          allowed.push(pieces[10]);
-        }
-        if (positions[11] === "0" || !pos.includes(positions[11])) {
-          setGreen4(true);
-          allow = true;
-          allowed.push(pieces[11]);
-        }
-      } else {
-        if (
-          (!pos.includes(positions[8]) ||
-            nb + pos.indexOf(positions[8]) <= 5) &&
-          positions[8] !== "0"
-        ) {
-          setGreen1(true);
-          allow = true;
-          allowed.push(pieces[8]);
-        }
-        if (
-          (!pos.includes(positions[9]) ||
-            nb + pos.indexOf(positions[9]) <= 5) &&
-          positions[9] !== "0"
-        ) {
-          setGreen2(true);
-          allow = true;
-          allowed.push(pieces[9]);
-        }
-        if (
-          (!pos.includes(positions[10]) ||
-            nb + pos.indexOf(positions[10]) <= 5) &&
-          positions[10] !== "0"
-        ) {
-          setGreen3(true);
-          allow = true;
-          allowed.push(pieces[10]);
-        }
-        if (
-          (!pos.includes(positions[11]) ||
-            nb + pos.indexOf(positions[11]) <= 5) &&
-          positions[11] !== "0"
-        ) {
-          setGreen4(true);
-          allow = true;
-          allowed.push(pieces[11]);
-        }
-      }
-    } else if (p === 4) {
-      const pos = ["y1", "y2", "y3", "y4", "y5", "y6"];
-      if (nb === 6) {
-        if (positions[12] === "0" || !pos.includes(positions[12])) {
-          setYellow1(true);
-          allow = true;
-          allowed.push(pieces[12]);
-        }
-        if (positions[13] === "0" || !pos.includes(positions[13])) {
-          setYellow2(true);
-          allow = true;
-          allowed.push(pieces[13]);
-        }
-        if (positions[14] === "0" || !pos.includes(positions[14])) {
-          setYellow3(true);
-          allow = true;
-          allowed.push(pieces[14]);
-        }
-        if (positions[15] === "0" || !pos.includes(positions[15])) {
-          setYellow4(true);
-          allow = true;
-          allowed.push(pieces[15]);
-        }
-      } else {
-        if (
-          (!pos.includes(positions[12]) ||
-            nb + pos.indexOf(positions[12]) <= 5) &&
-          positions[12] !== "0"
-        ) {
-          setYellow1(true);
-          allow = true;
-          allowed.push(pieces[12]);
-        }
-        if (
-          (!pos.includes(positions[13]) ||
-            nb + pos.indexOf(positions[13]) <= 5) &&
-          positions[13] !== "0"
-        ) {
-          setYellow2(true);
-          allow = true;
-          allowed.push(pieces[13]);
-        }
-        if (
-          (!pos.includes(positions[14]) ||
-            nb + pos.indexOf(positions[14]) <= 5) &&
-          positions[14] !== "0"
-        ) {
-          setYellow3(true);
-          allow = true;
-          allowed.push(pieces[14]);
-        }
-        if (
-          (!pos.includes(positions[15]) ||
-            nb + pos.indexOf(positions[15]) <= 5) &&
-          positions[15] !== "0"
-        ) {
-          setYellow4(true);
-          allow = true;
-          allowed.push(pieces[15]);
-        }
-      }
-    }
+    } 
+    // else if (p === 3) {
+    //   const pos = ["g1", "g2", "g3", "g4", "g5", "g6"];
+    //   if (nb === 6) {
+    //     if (positions[8] === "0" || !pos.includes(positions[8])) {
+    //       setGreen1(true);
+    //       allow = true;
+    //       allowed.push(pieces[8]);
+    //     }
+    //     if (positions[9] === "0" || !pos.includes(positions[9])) {
+    //       setGreen2(true);
+    //       allow = true;
+    //       allowed.push(pieces[9]);
+    //     }
+    //     if (positions[10] === "0" || !pos.includes(positions[10])) {
+    //       setGreen3(true);
+    //       allow = true;
+    //       allowed.push(pieces[10]);
+    //     }
+    //     if (positions[11] === "0" || !pos.includes(positions[11])) {
+    //       setGreen4(true);
+    //       allow = true;
+    //       allowed.push(pieces[11]);
+    //     }
+    //   } else {
+    //     if (
+    //       (!pos.includes(positions[8]) ||
+    //         nb + pos.indexOf(positions[8]) <= 5) &&
+    //       positions[8] !== "0"
+    //     ) {
+    //       setGreen1(true);
+    //       allow = true;
+    //       allowed.push(pieces[8]);
+    //     }
+    //     if (
+    //       (!pos.includes(positions[9]) ||
+    //         nb + pos.indexOf(positions[9]) <= 5) &&
+    //       positions[9] !== "0"
+    //     ) {
+    //       setGreen2(true);
+    //       allow = true;
+    //       allowed.push(pieces[9]);
+    //     }
+    //     if (
+    //       (!pos.includes(positions[10]) ||
+    //         nb + pos.indexOf(positions[10]) <= 5) &&
+    //       positions[10] !== "0"
+    //     ) {
+    //       setGreen3(true);
+    //       allow = true;
+    //       allowed.push(pieces[10]);
+    //     }
+    //     if (
+    //       (!pos.includes(positions[11]) ||
+    //         nb + pos.indexOf(positions[11]) <= 5) &&
+    //       positions[11] !== "0"
+    //     ) {
+    //       setGreen4(true);
+    //       allow = true;
+    //       allowed.push(pieces[11]);
+    //     }
+    //   }
+    // }
+    //  else if (p === 4) {
+    //   const pos = ["y1", "y2", "y3", "y4", "y5", "y6"];
+    //   if (nb === 6) {
+    //     if (positions[12] === "0" || !pos.includes(positions[12])) {
+    //       setYellow1(true);
+    //       allow = true;
+    //       allowed.push(pieces[12]);
+    //     }
+    //     if (positions[13] === "0" || !pos.includes(positions[13])) {
+    //       setYellow2(true);
+    //       allow = true;
+    //       allowed.push(pieces[13]);
+    //     }
+    //     if (positions[14] === "0" || !pos.includes(positions[14])) {
+    //       setYellow3(true);
+    //       allow = true;
+    //       allowed.push(pieces[14]);
+    //     }
+    //     if (positions[15] === "0" || !pos.includes(positions[15])) {
+    //       setYellow4(true);
+    //       allow = true;
+    //       allowed.push(pieces[15]);
+    //     }
+    //   } else {
+    //     if (
+    //       (!pos.includes(positions[12]) ||
+    //         nb + pos.indexOf(positions[12]) <= 5) &&
+    //       positions[12] !== "0"
+    //     ) {
+    //       setYellow1(true);
+    //       allow = true;
+    //       allowed.push(pieces[12]);
+    //     }
+    //     if (
+    //       (!pos.includes(positions[13]) ||
+    //         nb + pos.indexOf(positions[13]) <= 5) &&
+    //       positions[13] !== "0"
+    //     ) {
+    //       setYellow2(true);
+    //       allow = true;
+    //       allowed.push(pieces[13]);
+    //     }
+    //     if (
+    //       (!pos.includes(positions[14]) ||
+    //         nb + pos.indexOf(positions[14]) <= 5) &&
+    //       positions[14] !== "0"
+    //     ) {
+    //       setYellow3(true);
+    //       allow = true;
+    //       allowed.push(pieces[14]);
+    //     }
+    //     if (
+    //       (!pos.includes(positions[15]) ||
+    //         nb + pos.indexOf(positions[15]) <= 5) &&
+    //       positions[15] !== "0"
+    //     ) {
+    //       setYellow4(true);
+    //       allow = true;
+    //       allowed.push(pieces[15]);
+    //     }
+    //   }
+    // }
+    console.log('Allow',allow );
+    // console.log('before plr', player);
+    // setPlayer(nextPlayer());
     if (!allow) {
-      setPlayer(nextPlayer());
+
+      // console.log('before plr', player);
+      setPlayer(nextPlayer(p));
       setAbleToPlay(true);
+      console.log('after plr', player);
+      
     } else {
+      // console.log('plr', player);
       if (allowed.length === 1) {
         move_piece(allowed[0], nb);
       }
     }
+    
+    
   }
 
   // Play function
   function play(p) {
-    if (p === player && ableToplay) {
-      window.navigator.vibrate(50);
-      setAbleToPlay(false);
-      for (let i = 0; i <= 410; i++) {
-        setTimeout(function () {
-          // const nb = generateRandomIntegerInRange(1, 6);
-          console.log(diceCount);
-          setSteps(diceCount);
-          if (i === 410) {
-            allowPlayer(player, diceCount);
-          }
-        }, 1);
-      }
-      socket.emit('DiceRolled');
-    }
+    // console.log('Play', player);
+    
+    socket.emit('DiceRolled', p);
   }
-
+  // function play(p) {
+  //   if (p === player && ableToplay) {
+  //     window.navigator.vibrate(50);
+  //     setAbleToPlay(false);
+  //     for (let i = 0; i <= 410; i++) {
+  //       setTimeout(function () {
+  //         const nb = generateRandomIntegerInRange(1, 6);
+  //         setSteps(nb);
+  //         if (i === 410) {
+  //           allowPlayer(player, nb);
+  //         }
+  //       }, 1);
+  //     }
+  //   }
+  // }
   const one = (
     <React.Fragment>
       <div className="nard point_container">
@@ -1460,15 +1522,15 @@ useEffect(() => {
         <div className="line" style={{ display: "flex", flexDirection: "row" }}>
           <div
             className="column point_container"
-            style={{ width: "33%", height: "calc((100vw - 152vh)/12 - 1px)" }}
+            style={{ width: "33%", height: "calc(2.33333vw - 0.4667vh - 1px)" }}
           ></div>
           <div
             className="column point_container"
-            style={{ width: "33%", height: "calc((100vw - 152vh)/12 - 1px)" }}
+            style={{ width: "33%", height: "calc(2.33333vw - 0.4667vh - 1px)" }}
           ></div>
           <div
             className="column point_container"
-            style={{ width: "33%", height: "calc((100vw - 152vh)/12 - 1px)" }}
+            style={{ width: "33%", height: "calc(2.33333vw - 0.4667vh - 1px)" }}
           >
             <div className="point"></div>
           </div>
@@ -1476,33 +1538,33 @@ useEffect(() => {
         <div className="line" style={{ display: "flex", flexDirection: "row" }}>
           <div
             className="column point_container"
-            style={{ width: "33%", height: "calc((100vw - 152vh)/12 - 1px)" }}
+            style={{ width: "33%", height: "calc(2.33333vw - 0.4667vh - 1px)" }}
           ></div>
           <div
             className="column point_container"
-            style={{ width: "33%", height: "calc((100vw - 152vh)/12 - 1px)" }}
+            style={{ width: "33%", height: "calc(2.33333vw - 0.4667vh - 1px)" }}
           >
             <div className="point"></div>
           </div>
           <div
             className="column point_container"
-            style={{ width: "33%", height: "calc((100vw - 152vh)/12 - 1px)" }}
+            style={{ width: "33%", height: "calc(2.33333vw - 0.4667vh - 1px)" }}
           ></div>
         </div>
         <div className="line" style={{ display: "flex", flexDirection: "row" }}>
           <div
             className="column point_container"
-            style={{ width: "33%", height: "calc((100vw - 152vh)/12 - 1px)" }}
+            style={{ width: "33%", height: "calc(2.33333vw - 0.4667vh - 1px)" }}
           >
             <div className="point"></div>
           </div>
           <div
             className="column point_container"
-            style={{ width: "33%", height: "calc((100vw - 152vh)/12 - 1px)" }}
+            style={{ width: "33%", height: "calc(2.33333vw - 0.4667vh - 1px)" }}
           ></div>
           <div
             className="column point_container"
-            style={{ width: "33%", height: "calc((100vw - 152vh)/12 - 1px)" }}
+            style={{ width: "33%", height: "calc(2.33333vw - 0.4667vh - 1px)" }}
           ></div>
         </div>
       </div>
@@ -1515,13 +1577,13 @@ useEffect(() => {
         <div className="line" style={{ display: "flex", flexDirection: "row" }}>
           <div
             className="column point_container"
-            style={{ width: "50%", height: "calc((100vw - 152vh)/8)" }}
+            style={{ width: "50%", height: "calc((2.33333vw - 0.4667vh - 1px)" }}
           >
             <div className="point"></div>
           </div>
           <div
             className="column point_container"
-            style={{ width: "50%", height: "calc((100vw - 152vh)/8)" }}
+            style={{ width: "50%", height: "calc((2.33333vw - 0.4667vh - 1px)" }}
           >
             <div className="point"></div>
           </div>
@@ -1529,13 +1591,13 @@ useEffect(() => {
         <div className="line" style={{ display: "flex", flexDirection: "row" }}>
           <div
             className="column point_container"
-            style={{ width: "50%", height: "calc((100vw - 152vh)/8)" }}
+            style={{ width: "50%", height: "calc((2.33333vw - 0.4667vh - 1px)" }}
           >
             <div className="point"></div>
           </div>
           <div
             className="column point_container"
-            style={{ width: "50%", height: "calc((100vw - 152vh)/8)" }}
+            style={{ width: "50%", height: "calc((2.33333vw - 0.4667vh - 1px)" }}
           >
             <div className="point"></div>
           </div>
@@ -1550,17 +1612,17 @@ useEffect(() => {
         <div className="line" style={{ display: "flex", flexDirection: "row" }}>
           <div
             className="column point_container"
-            style={{ width: "33%", height: "calc((100vw - 152vh)/12 - 3px)" }}
+            style={{ width: "33%", height: "calc((2.33333vw - 0.4667vh - 1px)" }}
           >
             <div className="point"></div>
           </div>
           <div
             className="column point_container"
-            style={{ width: "33%", height: "calc((100vw - 152vh)/12 - 3px)" }}
+            style={{ width: "33%", height: "calc((2.33333vw - 0.4667vh - 1px)" }}
           ></div>
           <div
             className="column point_container"
-            style={{ width: "33%", height: "calc((100vw - 152vh)/12 - 3px)" }}
+            style={{ width: "33%", height: "calc((2.33333vw - 0.4667vh - 1px)" }}
           >
             <div className="point"></div>
           </div>
@@ -1568,33 +1630,33 @@ useEffect(() => {
         <div className="line" style={{ display: "flex", flexDirection: "row" }}>
           <div
             className="column point_container"
-            style={{ width: "33%", height: "calc((100vw - 152vh)/12 - 3px)" }}
+            style={{ width: "33%", height: "calc((2.33333vw - 0.4667vh - 1px)" }}
           ></div>
           <div
             className="column point_container"
-            style={{ width: "33%", height: "calc((100vw - 152vh)/12 - 3px)" }}
+            style={{ width: "33%", height: "calc((2.33333vw - 0.4667vh - 1px)" }}
           >
             <div className="point"></div>
           </div>
           <div
             className="column point_container"
-            style={{ width: "33%", height: "calc((100vw - 152vh)/12 - 3px)" }}
+            style={{ width: "33%", height: "calc((2.33333vw - 0.4667vh - 1px)" }}
           ></div>
         </div>
         <div className="line" style={{ display: "flex", flexDirection: "row" }}>
           <div
             className="column point_container"
-            style={{ width: "33%", height: "calc((100vw - 152vh)/12 - 3px)" }}
+            style={{ width: "33%", height: "calc((2.33333vw - 0.4667vh - 1px)" }}
           >
             <div className="point"></div>
           </div>
           <div
             className="column point_container"
-            style={{ width: "33%", height: "calc((100vw - 152vh)/12 - 3px)" }}
+            style={{ width: "33%", height: "calc((2.33333vw - 0.4667vh - 1px)" }}
           ></div>
           <div
             className="column point_container"
-            style={{ width: "33%", height: "calc((100vw - 152vh)/12 - 3px)" }}
+            style={{ width: "33%", height: "calc((2.33333vw - 0.4667vh - 1px)" }}
           >
             <div className="point"></div>
           </div>
@@ -1609,17 +1671,17 @@ useEffect(() => {
         <div className="line" style={{ display: "flex", flexDirection: "row" }}>
           <div
             className="column point_container"
-            style={{ width: "33%", height: "calc((100vw - 152vh)/12 - 3px)" }}
+            style={{ width: "33%", height: "calc((2.33333vw - 0.4667vh - 1px)" }}
           >
             <div className="point"></div>
           </div>
           <div
             className="column point_container"
-            style={{ width: "33%", height: "calc((100vw - 152vh)/12 - 3px)" }}
+            style={{ width: "33%", height: "calc((2.33333vw - 0.4667vh - 1px)" }}
           ></div>
           <div
             className="column point_container"
-            style={{ width: "33%", height: "calc((100vw - 152vh)/12 - 3px)" }}
+            style={{ width: "33%", height: "calc((2.33333vw - 0.4667vh - 1px)" }}
           >
             <div className="point"></div>
           </div>
@@ -1627,17 +1689,17 @@ useEffect(() => {
         <div className="line" style={{ display: "flex", flexDirection: "row" }}>
           <div
             className="column point_container"
-            style={{ width: "33%", height: "calc((100vw - 152vh)/12 - 3px)" }}
+            style={{ width: "33%", height: "calc((2.33333vw - 0.4667vh - 1px)" }}
           >
             <div className="point"></div>
           </div>
           <div
             className="column point_container"
-            style={{ width: "33%", height: "calc((100vw - 152vh)/12 - 3px)" }}
+            style={{ width: "33%", height: "calc((2.33333vw - 0.4667vh - 1px)" }}
           ></div>
           <div
             className="column point_container"
-            style={{ width: "33%", height: "calc((100vw - 152vh)/12 - 3px)" }}
+            style={{ width: "33%", height: "calc((2.33333vw - 0.4667vh - 1px)" }}
           >
             <div className="point"></div>
           </div>
@@ -1645,17 +1707,17 @@ useEffect(() => {
         <div className="line" style={{ display: "flex", flexDirection: "row" }}>
           <div
             className="column point_container"
-            style={{ width: "33%", height: "calc((100vw - 152vh)/12 - 3px)" }}
+            style={{ width: "33%", height: "calc((2.33333vw - 0.4667vh - 1px)" }}
           >
             <div className="point"></div>
           </div>
           <div
             className="column point_container"
-            style={{ width: "33%", height: "calc((100vw - 152vh)/12 - 3px)" }}
+            style={{ width: "33%", height: "calc((2.33333vw - 0.4667vh - 1px)" }}
           ></div>
           <div
             className="column point_container"
-            style={{ width: "33%", height: "calc((100vw - 152vh)/12 - 3px)" }}
+            style={{ width: "33%", height: "calc((2.33333vw - 0.4667vh - 1px)" }}
           >
             <div className="point"></div>
           </div>
